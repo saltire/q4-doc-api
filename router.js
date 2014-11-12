@@ -5,45 +5,67 @@ var mongoose = require('mongoose');
 
 var Any = new mongoose.Schema();
 
-var models = {
-    contentAssets: mongoose.model('ContentAssets', Any, 'ContentAssets'),
-    events: mongoose.model('Events', Any, 'Events'),
-    financialReports: mongoose.model('FinancialReports', Any, 'FinancialReports'),
-    presentations: mongoose.model('Presentations', Any, 'Presentations'),
-    pressReleases: mongoose.model('PressReleases', Any, 'PressReleases')
+
+var clients = {
+    ice: 'Q4WebIce2014Test',
+    newmont: 'Q4WebNewmont2014'
 };
 
-var queries = {
-    contentAssets: [
-        {'Q4Dto.FileType': 'PDF'}
-    ],
-    events: [
-        {'Q4Dto.EventPresentation.DocumentFileType': 'PDF'}, 
-        {'Q4Dto.EventPressRelease.DocumentFileType': 'PDF'}, 
-        {'Q4Dto.DocumentFileType': 'PDF'},
-        {'Q4Dto.Attachments': {$not: {$size: 0}}}
-    ],
-    financialReports: [
-        {'Q4Dto.Documents': {$elemMatch: {DocumentFileType: 'PDF'}}}
-    ],
-    presentations: [
-        {'Q4Dto.DocumentFileType': 'PDF'}
-    ],
-    pressReleases: [
-        {'Q4Dto.DocumentFileType': 'PDF'}
-    ]
-};
+var contentTypes = {
+    contentAssets: {
+        model: mongoose.model('ContentAsset', Any, 'ContentAssets'),
+        query: [
+            {'Q4Dto.FileType': 'PDF'}
+        ]
+    },
+    events: {
+        model: mongoose.model('Event', Any, 'Events'),
+        query: [
+            {'Q4Dto.EventPresentation.DocumentFileType': 'PDF'},
+            {'Q4Dto.EventPressRelease.DocumentFileType': 'PDF'},
+            {'Q4Dto.DocumentFileType': 'PDF'},
+            {'Q4Dto.Attachments': {$not: {$size: 0}}}
+        ]
+    },
+    financialReports: {
+        model: mongoose.model('FinancialReport', Any, 'FinancialReports'),
+        query: [
+            {'Q4Dto.Documents': {$elemMatch: {DocumentFileType: 'PDF'}}}
+        ]
+    },
+    presentations: {
+        model: mongoose.model('Presentation', Any, 'Presentations'),
+        query: [
+            {'Q4Dto.DocumentFileType': 'PDF'}
+        ]
+    },
+    pressReleases: {
+        model: mongoose.model('PressRelease', Any, 'PressReleases'),
+        query: [
+            {'Q4Dto.DocumentFileType': 'PDF'}
+        ]
+    }
+}
 
 
 var router = express.Router();
 
-router.param('modelType', function (req, res, next, modelType) {
-    if (modelType in models) {
-        req.modelType = modelType;
+router.param('client', function (req, res, next, client) {
+    if (client in clients) {
+        req.sitename = clients[client];
+        next();
+    } else {
+        res.status(404).send('Invalid client');
+    }
+});
+
+router.param('contentType', function (req, res, next, contentType) {
+    if (contentType in contentTypes) {
+        req.contentType = contentType;
         next();
     }
     else {
-        res.status(404).send('Invalid endpoint');
+        res.status(404).send('Invalid content type');
     }
 });
 
@@ -52,12 +74,12 @@ router.param('action', function (req, res, next, action) {
     next();
 });
 
-router.get('/:modelType/:action?', function (req, res, next) {
-    models[req.modelType].find({SiteName: 'Q4WebNewmont2014'})
-        .or(queries[req.modelType])
-        .and(req.query.tag ? [{'Q4Dto.TagsList': {$in: [tag]}}] : [])
-        .skip(req.query.skip ? req.query.skip : 0)
-        .limit(req.query.limit ? req.query.limit : 20)
+router.get('/:client/:contentType/:action?', function (req, res, next) {
+    contentTypes[req.contentType].model.find({SiteName: req.sitename})
+        .or(contentTypes[req.contentType].query)
+        .and(req.query.tag ? [{'Q4Dto.TagsList': {$in: [].concat(req.query.tag)}}] : null)
+        .skip(req.query.skip || 0)
+        .limit(req.query.limit || 20)
         .exec(function (err, data) {
             switch (req.action) {
                 case undefined:
