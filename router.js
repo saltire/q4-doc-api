@@ -1,6 +1,7 @@
 var express = require('express');
 //var async = require('async');
 
+var actions = require('./actions.js');
 var models = require('./models.js');
 
 
@@ -36,26 +37,20 @@ router.param('contentType', function (req, res, next, contentType) {
 });
 
 router.param('action', function (req, res, next, action) {
-    req.action = action;
-    next();
+    if (action in actions) {
+        req.action = actions[action];
+        next();
+    }
+    else {
+        res.status(404).send('Invalid action');
+    }
 });
 
 
 // get data for client and content type, and perform action
 router.get('/:client/:contentType/:action?', function (req, res, next) {
     models.getData(req, function (err, data) {
-        switch (req.action) {
-            case undefined:
-            res.jsonp(data);
-            break;
-
-            case 'count':
-            res.jsonp({total: data.length});
-            break;
-
-            default:
-            res.status(404).send('Invalid action');
-        }
+        res.jsonp(req.action ? req.action(data) : data);
     });
 });
 
