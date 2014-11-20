@@ -12,6 +12,9 @@ var clients = {
 
 var router = express.Router();
 
+
+// route parameters
+
 router.param('client', function (req, res, next, client) {
     if (client in clients) {
         req.sitename = clients[client];
@@ -37,6 +40,8 @@ router.param('action', function (req, res, next, action) {
     next();
 });
 
+
+// get data for client and content type, and perform action
 router.get('/:client/:contentType/:action?', function (req, res, next) {
     models.getData(req, function (err, data) {
         switch (req.action) {
@@ -53,5 +58,6 @@ router.get('/:client/:contentType/:action?', function (req, res, next) {
         }
     });
 });
+
 
 module.exports = router;
