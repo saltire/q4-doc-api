@@ -1,7 +1,6 @@
 var mongoose = require('mongoose');
 
-
-var defaultLimit = 20;
+var cfg = require('./config.js');
 
 
 // valid content types existing in the database
@@ -112,6 +111,6 @@ module.exports.getData = function (req, callback) {
             } : {}
         ])
         .skip(req.query.skip || 0)
-        .limit(req.query.limit || defaultLimit)
+        .limit(req.query.limit || cfg.defaultLimit)
         .exec(callback);
 };
